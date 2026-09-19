@@ -1,9 +1,15 @@
 # SPDX-FileCopyrightText: (c) 2026 Mark Nkugwa
 # SPDX-License-Identifier: Apache-2.0
 
+import os
+
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, FallingEdge, RisingEdge
+
+# Ticks per second as simulated: 4 for RTL (module parameter override in tb.v),
+# 32768 for gate-level (baked into the synthesized netlist). Set by the Makefile.
+TICKS_PER_SEC = int(os.environ.get("COCOTB_TICKS_PER_SEC", "4"))
 
 
 # ---- uio_in bit map ----
@@ -129,9 +135,10 @@ async def test_project(dut):
     dut._log.info("Writing ONTIME=0x0201 (max_on=2 min_on=1)")
     await shift_frame(dut, 0x5, 0x0201, uio)
 
-    # Wait 2 minute ticks (TICKS_PER_SEC=4 → 1 min=240 clks → 2 min=480 clks + margin)
-    dut._log.info("Waiting ~500 clocks for 2 minute ticks to trigger fault")
-    await ClockCycles(dut.clk, 520)
+    # Wait 2 minute ticks (1 min = TICKS_PER_SEC*60 clocks) to trigger fault
+    fault_wait = int(TICKS_PER_SEC * 60 * 2.5)
+    dut._log.info(f"Waiting {fault_wait} clocks (2.5 min @ {TICKS_PER_SEC} ticks/s) for fault")
+    await ClockCycles(dut.clk, fault_wait)
     fault = (int(dut.uo_out.value) >> 3) & 1
     dut._log.info(f"fault after 2+ min = {fault}")
     assert fault == 1, "fault should latch after max_on exceeded"

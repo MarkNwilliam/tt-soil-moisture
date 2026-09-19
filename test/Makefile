@@ -7,6 +7,15 @@ FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 
+# Ticks-per-second the cocotb test assumes for minute-based waits.
+# RTL sim overrides the module parameter to 4; the GL netlist bakes in 32768.
+ifeq ($(GATES),yes)
+SIM_TICKS_PER_SEC ?= 32768
+else
+SIM_TICKS_PER_SEC ?= 4
+endif
+export COCOTB_TICKS_PER_SEC = $(SIM_TICKS_PER_SEC)
+
 # RTL source files (SystemVerilog requires -g2012 for iverilog)
 PROJECT_SOURCES = tt_um_soil_moisture.v \
                    top.sv \
